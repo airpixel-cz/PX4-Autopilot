@@ -4,24 +4,30 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ubuntu-22.04
+  build_px4_fmu_v5:
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout PX4 repo
-        uses: actions/checkout@v4
+    - name: Checkout PX4 source
+      uses: actions/checkout@v3
 
-      - name: Setup PX4 toolchain (docker)
-        uses: addnab/docker-run-action@v3
-        with:
-          image: px4io/px4-dev-base-focal:2023-09-11
-          options: -v ${{ github.workspace }}:/src
-          run: |
-            cd /src
-            make px4_fmu-v5_default
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y python3-pip git wget
+        pip3 install --upgrade pip
+        pip3 install -r requirements.txt
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: px4_firmware
-          path: build/px4_fmu-v5_default/px4_fmu-v5_default.px4
+    - name: Setup PX4 toolchain
+      run: |
+        bash ./Tools/setup/ubuntu.sh
+
+    - name: Build px4_fmu-v5_default
+      run: |
+        make px4_fmu-v5_default
+
+    - name: Upload firmware artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: px4_fmu-v5_default
+        path: build/px4_fmu-v5_default/px4_fmu-v5_default.px4
