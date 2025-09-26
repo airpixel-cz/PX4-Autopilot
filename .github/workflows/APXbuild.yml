@@ -1,33 +1,35 @@
-name: PX4 Firmware Build
+name: PX4 Firmware Buildv2
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:   # jen ruční spuštění přes Actions tab
 
 jobs:
-  build_px4_fmu_v5:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout PX4 source
-      uses: actions/checkout@v3
+      - name: Checkout PX4 Firmware
+        uses: actions/checkout@v3
 
-    - name: Install dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y python3-pip git wget
-        pip3 install --upgrade pip
-        pip3 install -r requirements.txt
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
-    - name: Setup PX4 toolchain
-      run: |
-        bash ./Tools/setup/ubuntu.sh
-
-    - name: Build px4_fmu-v5_default
-      run: |
-        make px4_fmu-v5_default
-
-    - name: Upload firmware artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: px4_fmu-v5_default
-        path: build/px4_fmu-v5_default/px4_fmu-v5_default.px4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git python3-pip python3-venv python3-dev build-essential \
+          ninja-build cmake genromfs ccache gawk zip curl wget
+          pip3 install --user pyserial empy toml numpy pandas jinja2 pyulog
+      - name: Install PX4 toolchain
+        run: |
+          bash ./Tools/setup/ubuntu.sh
+      - name: Build PX4 firmware
+        run: |
+          make px4_fmu-v5_default
+      - name: Upload PX4 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: px4_fmu-v5_default
+          path: build/px4_fmu-v5_default/px4_fmu-v5_default.px4
