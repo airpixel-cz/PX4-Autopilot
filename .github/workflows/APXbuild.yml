@@ -11,26 +11,13 @@ jobs:
       - name: Checkout PX4 repo
         uses: actions/checkout@v4
 
-      - name: Cache ccache
-        uses: actions/cache@v4
-        with:
-          path: ~/.ccache
-          key: ${{ runner.os }}-ccache-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-ccache-
-
-      - name: Build inside PX4 docker
+      - name: Setup PX4 toolchain (docker)
         uses: addnab/docker-run-action@v3
         with:
           image: px4io/px4-dev-base-focal:2023-09-11
-          options: |
-            -v ${{ github.workspace }}:/src
-            -v ~/.ccache:/root/.ccache
+          options: -v ${{ github.workspace }}:/src
           run: |
             cd /src
-            export CCACHE_DIR=/root/.ccache
-            export CC="ccache gcc"
-            export CXX="ccache g++"
             make px4_fmu-v5_default
 
       - name: Upload artifact
