@@ -1,0 +1,40 @@
+name: PX4 Firmware Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout PX4 repo
+        uses: actions/checkout@v4
+
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ${{ runner.os }}-ccache-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-
+
+      - name: Build inside PX4 docker
+        uses: addnab/docker-run-action@v3
+        with:
+          image: px4io/px4-dev-base-focal:2023-09-11
+          options: |
+            -v ${{ github.workspace }}:/src
+            -v ~/.ccache:/root/.ccache
+          run: |
+            cd /src
+            export CCACHE_DIR=/root/.ccache
+            export CC="ccache gcc"
+            export CXX="ccache g++"
+            make px4_fmu-v5_default
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: px4_firmware
+          path: build/px4_fmu-v5_default/px4_fmu-v5_default.px4
