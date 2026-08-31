@@ -482,11 +482,12 @@ void MavlinkReceiver::handle_messages_in_gimbal_mode(mavlink_message_t &msg)
 		{
 			mavlink_command_long_t cmd;
 			mavlink_msg_command_long_decode(&msg, &cmd);
-			
+
 			if (cmd.command == MAV_CMD_SET_MESSAGE_INTERVAL ||
-				cmd.command == MAV_CMD_GET_MESSAGE_INTERVAL ||
-				cmd.command == MAV_CMD_REQUEST_MESSAGE) {
-				handle_message_command_long(&msg);
+			    cmd.command == MAV_CMD_GET_MESSAGE_INTERVAL ||
+			    cmd.command == MAV_CMD_REQUEST_MESSAGE) {
+
+			    handle_message_command_long(&msg);
 			}
 		}
 		break;
