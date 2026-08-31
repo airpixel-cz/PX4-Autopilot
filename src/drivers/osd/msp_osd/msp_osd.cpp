@@ -66,6 +66,8 @@
 
 #include "MspV1.hpp"
 
+ModuleBase::Descriptor MspOsd::desc{task_spawn, custom_command, print_usage};
+
 //OSD elements positions
 //in betaflight configurator set OSD elements to your desired positions and in CLI type "set osd" to retreieve the numbers.
 //234 -> not visible. Horizontally 2048-2074(spacing 1), vertically 2048-2528(spacing 32). 26 characters X 15 lines
@@ -191,7 +193,7 @@ void MspOsd::SendConfig()
 	msp_osd_config.osd_crosshairs_pos = LOCATION_HIDDEN;
 
 	if (enabled(SymbolIndex::CROSSHAIRS)) {
-		msp_osd_config.osd_crosshairs_pos = osd_crosshairs_pos - 32 * _param_osd_ch_height.get();
+		msp_osd_config.osd_crosshairs_pos = osd_crosshairs_pos - 32 * _param_osd_ch_pos_ver.get();
 	}
 
 	// possibly available, but not currently used
@@ -246,7 +248,7 @@ void MspOsd::Run()
 {
 	if (should_exit()) {
 		ScheduleClear();
-		exit_and_cleanup();
+		exit_and_cleanup(desc);
 		return;
 	}
 
@@ -363,9 +365,20 @@ void MspOsd::Run()
 		const auto msg_original = msp_osd::construct_BATTERY_STATE(battery_status);
 		this->Send(MSP_BATTERY_STATE, &msg_original);
 
-		const auto msg = msp_osd::construct_rendor_BATTERY_STATE(battery_status);
-		this->Send(MSP_CMD_DISPLAYPORT, &msg, sizeof(msp_rendor_battery_state_t));
+		if (enabled(SymbolIndex::AVG_CELL_VOLTAGE)) {
+			const auto msg = msp_osd::construct_rendor_BATTERY_STATE(battery_status);
+			this->Send(MSP_CMD_DISPLAYPORT, &msg, sizeof(msp_rendor_battery_state_t));
+		}
 
+		if (enabled(SymbolIndex::CURRENT_DRAW)) {
+			const auto msg = msp_osd::construct_rendor_CURRENT_DRAW(battery_status);
+			this->Send(MSP_CMD_DISPLAYPORT, &msg, sizeof(msp_rendor_current_draw_t));
+		}
+
+		if (enabled(SymbolIndex::MAH_DRAWN)) {
+			const auto msg = msp_osd::construct_rendor_MAH_DRAWN(battery_status);
+			this->Send(MSP_CMD_DISPLAYPORT, &msg, sizeof(msp_rendor_mah_drawn_t));
+		}
 	}
 
 	// MSP_RAW_GPS
@@ -387,6 +400,11 @@ void MspOsd::Run()
 			const auto msg = msp_osd::construct_rendor_GPS_NUM(vehicle_gps_position);
 			this->Send(MSP_CMD_DISPLAYPORT, &msg, sizeof(msp_rendor_satellites_used_t));
 		}
+
+		if (enabled(SymbolIndex::GPS_SPEED)) {
+			const auto msg = msp_osd::construct_rendor_GPS_SPEED(vehicle_gps_position);
+			this->Send(MSP_CMD_DISPLAYPORT, &msg, sizeof(msp_rendor_gps_speed_t));
+		}
 	}
 
 	// MSP_COMP_GPS
@@ -399,7 +417,6 @@ void MspOsd::Run()
 
 		if (enabled(SymbolIndex::HOME_DIST)) {
 			const auto msg =  msp_osd::construct_rendor_distanceToHome(home_position, vehicle_global_position);
-
 			this->Send(MSP_CMD_DISPLAYPORT, &msg, sizeof(msp_rendor_distanceToHome_t));
 		}
 	}
@@ -410,12 +427,16 @@ void MspOsd::Run()
 		_vehicle_attitude_sub.copy(&vehicle_attitude);
 
 		{
-			const auto msg = msp_osd::construct_rendor_PITCH(vehicle_attitude);
-			this->Send(MSP_CMD_DISPLAYPORT, &msg, sizeof(msp_rendor_pitch_t));
+			if (enabled(SymbolIndex::PITCH_ANGLE)) {
+				const auto msg = msp_osd::construct_rendor_PITCH(vehicle_attitude);
+				this->Send(MSP_CMD_DISPLAYPORT, &msg, sizeof(msp_rendor_pitch_t));
+			}
 		}
 		{
-			const auto msg = msp_osd::construct_rendor_ROLL(vehicle_attitude);
-			this->Send(MSP_CMD_DISPLAYPORT, &msg, sizeof(msp_rendor_roll_t));
+			if (enabled(SymbolIndex::ROLL_ANGLE)) {
+				const auto msg = msp_osd::construct_rendor_ROLL(vehicle_attitude);
+				this->Send(MSP_CMD_DISPLAYPORT, &msg, sizeof(msp_rendor_roll_t));
+			}
 		}
 	}
 
@@ -463,6 +484,15 @@ void MspOsd::Run()
 
 		const auto msg = msp_osd::construct_MSP_STATUS(vehicle_status);
 		this->Send(MSP_STATUS, &msg, sizeof(msp_status_t));
+	}
+
+	// MSP_CROSSHAIRS
+	{
+		if (enabled(SymbolIndex::CROSSHAIRS)) {
+			const auto msg = msp_osd::construct_rendor_CROSSHAIRS(_param_osd_ch_pos_ver.get(), _param_osd_ch_pos_hor.get());
+
+			this->Send(MSP_CMD_DISPLAYPORT, &msg, sizeof(msp_rendor_crosshairs_t));
+		}
 	}
 
 	subcmd = MSP_DP_DRAW_SCREEN;
@@ -588,8 +618,8 @@ int MspOsd::task_spawn(int argc, char *argv[])
 	MspOsd *instance = new MspOsd(device);
 
 	if (instance) {
-		_object.store(instance);
-		_task_id = task_id_is_work_queue;
+		desc.object.store(instance);
+		desc.task_id = task_id_is_work_queue;
 
 		if (instance->init()) {
 			return PX4_OK;
@@ -600,8 +630,8 @@ int MspOsd::task_spawn(int argc, char *argv[])
 	}
 
 	delete instance;
-	_object.store(nullptr);
-	_task_id = -1;
+	desc.object.store(nullptr);
+	desc.task_id = -1;
 
 	return PX4_ERROR;
 }
@@ -700,8 +730,8 @@ int MspOsd::custom_command(int argc, char *argv[])
 		if (argc == 1) {
 			PX4_INFO("Please provide a channel");
 
-		} else if (is_running() && _object.load()) {
-			MspOsd *object = _object.load();
+		} else if (is_running(desc) && desc.object.load()) {
+			MspOsd *object = get_instance<MspOsd>(desc);
 			int ret = object->set_channel(argv[1]);
 
 			if (ret == -1) {
@@ -748,5 +778,5 @@ $ msp_osd
 
 extern "C" __EXPORT int msp_osd_main(int argc, char *argv[])
 {
-	return MspOsd::main(argc, argv);
+	return ModuleBase::main(MspOsd::desc, argc, argv);
 }

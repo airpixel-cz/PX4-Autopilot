@@ -62,7 +62,8 @@ void RangeFinderConsistencyCheck::update(float dist_bottom, float dist_bottom_va
 
 	const float normalized_innov_sq = (_innov * _innov) / _innov_var;
 	_test_ratio = normalized_innov_sq / (_gate * _gate);
-	_signed_test_ratio_lpf.setParameters(dt, _signed_test_ratio_tau);
+	_signed_test_ratio_lpf.setParameters(static_cast<uint64_t>(dt * 1e6f),
+					     static_cast<uint64_t>(_signed_test_ratio_tau * 1e6f));
 	const float signed_test_ratio = matrix::sign(_innov) * _test_ratio;
 	_signed_test_ratio_lpf.update(signed_test_ratio);
 
@@ -75,7 +76,9 @@ void RangeFinderConsistencyCheck::update(float dist_bottom, float dist_bottom_va
 void RangeFinderConsistencyCheck::updateConsistency(float vz, uint64_t time_us)
 {
 	if (fabsf(_signed_test_ratio_lpf.getState()) >= 1.f) {
-		if ((time_us - _time_last_horizontal_motion) > _signed_test_ratio_tau) {
+		uint64_t timeout_us = _signed_test_ratio_tau * 1e6f;
+
+		if ((time_us - _time_last_horizontal_motion) > timeout_us) {
 			_is_kinematically_consistent = false;
 			_time_last_inconsistent_us = time_us;
 		}

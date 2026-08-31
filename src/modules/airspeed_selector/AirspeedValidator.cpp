@@ -122,8 +122,9 @@ AirspeedValidator::update_CAS_scale_validated(bool gnss_valid, const matrix::Vec
 		reset_CAS_scale_check();
 	}
 
-	const float course_over_ground_rad = matrix::wrap_2pi(atan2f(vI(0), vI(1)));
-	const int segment_index = int(SCALE_CHECK_SAMPLES * course_over_ground_rad / (2.f * M_PI_F));
+	const float course_over_ground_rad = matrix::wrap_2pi(atan2f(vI(1), vI(0)));
+	const int segment_index = static_cast<int>(SCALE_CHECK_SAMPLES * course_over_ground_rad / (2.f * M_PI_F))
+				  % SCALE_CHECK_SAMPLES;
 
 	_scale_check_groundspeed(segment_index) = vI.norm();
 	_scale_check_TAS(segment_index) = airspeed_true_raw;
@@ -310,8 +311,8 @@ AirspeedValidator::check_first_principle(const uint64_t timestamp, const float t
 
 	} else {
 		// update filters, with different time constant
-		_IAS_derivative.setParameters(dt, 5.f);
-		_pitch_filtered.setParameters(dt, 1.5f);
+		_IAS_derivative.setParameters(static_cast<uint64_t>(dt * 1e6f), 5_s);
+		_pitch_filtered.setParameters(static_cast<uint64_t>(dt * 1e6f), 1500_ms);
 
 		_IAS_derivative.update(_IAS);
 		_pitch_filtered.update(pitch);

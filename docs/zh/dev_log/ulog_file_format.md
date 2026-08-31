@@ -218,7 +218,7 @@ A key defined in the Information message must be unique. Meaning there must not 
 | `char[value_len] ver_sw_branch`     | git branch                                                                    | "master"                                                          |
 | `uint32_t ver_sw_release`           | 软件版本 (见下文)                                                 | 0x010401ff                                                        |
 | `char[value_len] sys_os_name`       | 操作系统名称                                                                        | "Linux"                                                           |
-| `char[value_len] sys_os_ve`r        | 操作系统版本 (git 标签)                                            | "9f82919"                                                         |
+| `char[value_len] sys_os_ver`        | 操作系统版本 (git 标签)                                            | "9f82919"                                                         |
 | `uint32_t ver_os_release`           | 操作系统版本 (见下文)                                               | 0x010401ff                                                        |
 | `char[value_len] sys_toolchain`     | 工具链名称                                                                         | "GNU GCC"                                                         |
 | `char[value_len] sys_toolchain_ver` | 工具链版本                                                                         | "6.2.1"                           |
@@ -498,10 +498,11 @@ Since the Definitions and Data Sections use the same message header format, they
 - [QGroundControl](https://github.com/mavlink/qgroundcontrol): C++, ULog streaming via MAVLink and minimal parsing for GeoTagging.
 - [mavlink-router](https://github.com/mavlink-router/mavlink-router): C++, ULog streaming via MAVLink.
 - [MAVGAnalysis](https://github.com/ecmnet/MAVGCL): Java, ULog streaming via MAVLink and parser for plotting and analysis.
-- [PlotJuggler](https://github.com/facontidavide/PlotJuggler): C++/Qt application to plot logs and time series. 自版本2.1.3支持 ULog。
+- [PlotJuggler](https://github.com/PlotJuggler/PlotJuggler): C++/Qt application to plot logs and time series. 自版本2.1.3支持 ULog。
 - [ulogreader](https://github.com/maxsun/ulogreader): Javascript, ULog reader and parser outputs log in JSON object format.
 - [Foxglove](https://foxglove.dev): an integrated visualization and diagnosis tool for robotics data that supports ULog files.
 - [TypeScript ULog parser](https://github.com/foxglove/ulog): TypeScript, ULog reader that outputs JS objects.
+- [yule_log](https://crates.io/crates/yule_log): A streaming ULog parser written in Rust.
 
 ## 文件格式版本历史
 

@@ -63,9 +63,34 @@ public:
 			uint16_t hspeed : 1; ///< 8 - true if horizontal speed is excessive (can only be used when stationary on ground)
 			uint16_t vspeed : 1; ///< 9 - true if vertical speed error is excessive
 			uint16_t spoofed: 1; ///< 10 - true if the GNSS data is spoofed
+			uint16_t jammed : 1; ///< 11 - true if the GNSS data is jammed
 		} flags;
 		uint16_t value;
 	};
+
+	/**
+	 * Fail-status flags (gps_check_fail_status_u layout) of the checks enabled by EKF2_GPS_CHECK.
+	 * The param bit order (GnssChecksMask) and the status bit order are not parallel, so they are
+	 * mapped one by one: a positional shift silently misassigns every check that is appended to
+	 * one of the two enums but not the other.
+	 */
+	uint16_t getEnabledChecksFailStatusMask() const
+	{
+		gps_check_fail_status_u mask{};
+		mask.flags.fix     = isCheckEnabled(GnssChecksMask::kFix);
+		mask.flags.nsats   = isCheckEnabled(GnssChecksMask::kNsats);
+		mask.flags.pdop    = isCheckEnabled(GnssChecksMask::kPdop);
+		mask.flags.hacc    = isCheckEnabled(GnssChecksMask::kHacc);
+		mask.flags.vacc    = isCheckEnabled(GnssChecksMask::kVacc);
+		mask.flags.sacc    = isCheckEnabled(GnssChecksMask::kSacc);
+		mask.flags.hdrift  = isCheckEnabled(GnssChecksMask::kHdrift);
+		mask.flags.vdrift  = isCheckEnabled(GnssChecksMask::kVdrift);
+		mask.flags.hspeed  = isCheckEnabled(GnssChecksMask::kHspd);
+		mask.flags.vspeed  = isCheckEnabled(GnssChecksMask::kVspd);
+		mask.flags.spoofed = isCheckEnabled(GnssChecksMask::kSpoofed);
+		mask.flags.jammed  = isCheckEnabled(GnssChecksMask::kJammed);
+		return mask.value;
+	}
 
 	void resetHard()
 	{
@@ -108,10 +133,11 @@ private:
 		kHspd    = (1 << 7),
 		kVspd    = (1 << 8),
 		kSpoofed = (1 << 9),
-		kFix     = (1 << 10)
+		kFix     = (1 << 10),
+		kJammed  = (1 << 11)
 	};
 
-	bool isCheckEnabled(GnssChecksMask check) { return (_params.check_mask & static_cast<int32_t>(check)); }
+	bool isCheckEnabled(GnssChecksMask check) const { return (_params.check_mask & static_cast<int32_t>(check)); }
 
 	bool runSimplifiedChecks(const gnssSample &gnss);
 	bool runInitialFixChecks(const gnssSample &gnss);

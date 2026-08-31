@@ -85,10 +85,32 @@ endif()
 if(PX4_ETHERNET)
 	set(added_arguments ${added_arguments} --ethernet)
 endif()
+# Check if board has an rc.board_airframes file to filter airframes
+set(board_airframes_file "${PX4_BOARD_DIR}/init/rc.board_airframes")
+set(airframes_whitelist "")
+if(EXISTS "${board_airframes_file}")
+	message(STATUS "ROMFS: Using board-specific airframes list: ${board_airframes_file}")
+	file(STRINGS "${board_airframes_file}" airframes_whitelist)
+	# Remove comments and empty lines
+	list(FILTER airframes_whitelist EXCLUDE REGEX "^[ \t]*#")
+	list(FILTER airframes_whitelist EXCLUDE REGEX "^[ \t]*$")
+endif()
+
 # create list of relative romfs file names
 set(romfs_copy_files_relative)
 foreach(romfs_file IN LISTS romfs_copy_files)
 	string(REPLACE "${romfs_src_dir}/" "" romfs_file_rel ${romfs_file})
+
+	# If we have an airframes whitelist, filter airframe files
+	if(airframes_whitelist AND romfs_file_rel MATCHES "^init.d/airframes/")
+		# Extract just the filename
+		get_filename_component(airframe_name "${romfs_file_rel}" NAME)
+		# Check if it's in the whitelist
+		if(NOT "${airframe_name}" IN_LIST airframes_whitelist)
+			continue()
+		endif()
+	endif()
+
 	list(APPEND romfs_copy_files_relative ${romfs_file_rel})
 endforeach()
 # copy the ROMFS files by creating a tar and extracting it to the build
@@ -135,6 +157,7 @@ add_custom_command(
 	COMMAND ${PYTHON_EXECUTABLE} ${PX4_SOURCE_DIR}/Tools/filepaths/generate_config.py
 		--rc-dir ${romfs_gen_root_dir}/init.d
 		--params-file ${CONFIG_BOARD_PARAM_FILE}
+		--board-root-path ${CONFIG_BOARD_ROOT_PATH}
 	COMMAND ${CMAKE_COMMAND} -E touch ${romfs_copy_stamp}
 	WORKING_DIRECTORY ${romfs_gen_root_dir}
 	DEPENDS ${romfs_tar_file}
@@ -171,6 +194,7 @@ endif()
 # board custom init files
 set(OPTIONAL_BOARD_RC)
 list(APPEND OPTIONAL_BOARD_RC
+	rc.board_early
 	rc.board_defaults
 	rc.board_sensors
 	rc.board_extras
