@@ -479,7 +479,6 @@ void MavlinkReceiver::handle_messages_in_gimbal_mode(mavlink_message_t &msg)
 		break;
 		
 	case MAVLINK_MSG_ID_COMMAND_LONG:{
-		
 			mavlink_command_long_t cmd;
 			mavlink_msg_command_long_decode(&msg, &cmd);
 
