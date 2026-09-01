@@ -493,7 +493,7 @@ void MavlinkReceiver::handle_messages_in_gimbal_mode(mavlink_message_t &msg)
 	}
 
 	/* handle packet with timesync component */
-	_mavlink_timesync.handle_message(msg);
+	_mavlink_timesync.handle_message(&msg);
 	
 	// Message forwarding
 	_mavlink.handle_message(&msg);
